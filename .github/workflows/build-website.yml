@@ -29,6 +29,7 @@ jobs:
           elif [ "${currentBranch}" = "release-1.19" ]; then
             echo "flink_alias=stable" >> ${GITHUB_ENV}
           fi
+          
       - name: Build documentation
         run: |
           docker run --rm --volume "$PWD:/root/flink" chesnay/flink-ci:java_8_11_17_21_maven_386 bash -c "cd /root/flink && ./.github/workflows/docs.sh"
@@ -40,7 +41,7 @@ jobs:
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          tag: ${{ env.ReleaseVersion }}
+          tag: ${{ env.flink_branch }}
           allowUpdates: true
           artifacts: "build.tar.gz"
           token: ${{ github.token }}
