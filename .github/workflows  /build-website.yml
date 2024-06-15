@@ -1,0 +1,48 @@
+name: "Build documentation"
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build-documentation:
+    if: github.repository == 'apache/flink'
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        branch:
+          - master
+          - release-1.19
+          - release-1.18
+          - release-1.17
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ matrix.branch }}
+      - name: Set branch environment variable
+        run: |
+          currentBranch=$(git branch --show-current)
+
+          echo "flink_branch=${currentBranch}" >> ${GITHUB_ENV}
+
+          if [ "${currentBranch}" = "master" ]; then
+            echo "flink_alias=release-1.20" >> ${GITHUB_ENV}
+          elif [ "${currentBranch}" = "release-1.19" ]; then
+            echo "flink_alias=stable" >> ${GITHUB_ENV}
+          fi
+      - name: Build documentation
+        run: |
+          docker run --rm --volume "$PWD:/root/flink" chesnay/flink-ci:java_8_11_17_21_maven_386 bash -c "cd /root/flink && ./.github/workflows/docs.sh"
+          
+      - name: Build
+        run: |
+          tar -czvf build.tar.gz docs/target/ 
+          
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ env.ReleaseVersion }}
+          allowUpdates: true
+          artifacts: "build.tar.gz"
+          token: ${{ github.token }}
+          generateReleaseNotes: true             
